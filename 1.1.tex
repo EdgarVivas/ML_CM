@@ -1,0 +1,184 @@
+
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{fancyvrb}
+
+\geometry{a4paper, margin=1in}
+
+% Define colors for listings
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegray},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{Code Listing: 1.1.py}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section*{Source Code}
+
+\begin{lstlisting}[language=Python]
+import os
+import random
+from PIL import Image, ImageDraw
+import math
+
+\# Set random seed for reproducibility
+random.seed(42)
+
+\# Configuration
+IMAGE\_SIZE = (64, 64)  \# Frame size is 64x64
+NUM\_IMAGES\_PER\_CLASS = 1000  \# Number of images per class
+OUTPUT\_DIR = 'dataset\_bw'  \# Output directory for images
+
+\# Define classes
+CLASSES = ['circle\_damage', 'line\_damage', 'star\_damage', 'no\_damage', 'multiple\_damages']
+
+\# Configuration for number of shapes per damage type
+SHAPES\_PER\_DAMAGE = \{
+    'circle\_damage': (1, 3),  \# 1 to 3 circles per image
+    'line\_damage': (1, 3),    \# 1 to 3 lines per image
+    'star\_damage': (1, 3),    \# 1 to 3 stars per image
+\}
+
+\# Create output directories
+def create\_directories(base\_dir, classes):
+    if not os.path.exists(base\_dir):
+        os.makedirs(base\_dir)
+    for cls in classes:
+        class\_dir = os.path.join(base\_dir, cls)
+        if not os.path.exists(class\_dir):
+            os.makedirs(class\_dir)
+
+\# Draw filled circle damage
+def draw\_circle(draw):
+    radius = random.randint(5, 15)  \# Adjusted for 64x64 frame size
+    x = random.randint(radius, IMAGE\_SIZE[0] - radius)
+    y = random.randint(radius, IMAGE\_SIZE[1] - radius)
+    bounding\_box = [x - radius, y - radius, x + radius, y + radius]
+    color = 'white'
+    draw.ellipse(bounding\_box, outline=color, fill=color, width=2)
+
+\# Draw line damage
+def draw\_line(draw):
+    x1 = random.randint(0, IMAGE\_SIZE[0])
+    y1 = random.randint(0, IMAGE\_SIZE[1])
+    x2 = random.randint(0, IMAGE\_SIZE[0])
+    y2 = random.randint(0, IMAGE\_SIZE[1])
+    color = 'white'
+    width = random.randint(1, 2)  \# Adjusted line width
+    draw.line([x1, y1, x2, y2], fill=color, width=width)
+
+\# Draw star damage
+def draw\_star(draw):
+    num\_points = 5
+    outer\_radius = random.randint(8, 20)  \# Adjusted for 64x64 frame size
+    x\_center = random.randint(outer\_radius, IMAGE\_SIZE[0] - outer\_radius)
+    y\_center = random.randint(outer\_radius, IMAGE\_SIZE[1] - outer\_radius)
+    
+    rotation\_angle = random.uniform(0, 2 * math.pi)
+    points = []
+    angle\_offset = rotation\_angle - math.pi / 2
+    for i in range(num\_points):
+        angle = angle\_offset + (2 * math.pi * i) / num\_points
+        x = x\_center + outer\_radius * math.cos(angle)
+        y = y\_center + outer\_radius * math.sin(angle)
+        points.append((x, y))
+    
+    connect\_order = [0, 2, 4, 1, 3, 0]
+    color = 'white'
+    width = 2
+    for i in range(num\_points):
+        start\_point = points[connect\_order[i]]
+        end\_point = points[connect\_order[i + 1]]
+        draw.line([start\_point, end\_point], fill=color, width=width)
+
+\# Draw multiple damages
+def draw\_multiple(draw):
+    damage\_types = ['circle', 'line', 'star']
+    num\_damages = random.randint(2, 4)
+    for \_ in range(num\_damages):
+        damage = random.choice(damage\_types)
+        if damage == 'circle':
+            draw\_circle(draw)
+        elif damage == 'line':
+            draw\_line(draw)
+        elif damage == 'star':
+            draw\_star(draw)
+
+\# Generate no\_damage image
+def generate\_no\_damage():
+    return Image.new('RGB', IMAGE\_SIZE, color='black')
+
+\# Generate damage image with random number of shapes
+def generate\_damage\_image(damage\_type):
+    image = Image.new('RGB', IMAGE\_SIZE, color='black')
+    draw = ImageDraw.Draw(image)
+    
+    if damage\_type in SHAPES\_PER\_DAMAGE:
+        min\_shapes, max\_shapes = SHAPES\_PER\_DAMAGE[damage\_type]
+        num\_shapes = random.randint(min\_shapes, max\_shapes)
+        for \_ in range(num\_shapes):
+            if damage\_type == 'circle\_damage':
+                draw\_circle(draw)
+            elif damage\_type == 'line\_damage':
+                draw\_line(draw)
+            elif damage\_type == 'star\_damage':
+                draw\_star(draw)
+    elif damage\_type == 'multiple\_damages':
+        draw\_multiple(draw)
+    
+    return image
+
+\# Save images to respective directories
+def save\_images():
+    create\_directories(OUTPUT\_DIR, CLASSES)
+    for cls in CLASSES:
+        print(f"Generating images for class: \{cls\}")
+        for i in range(NUM\_IMAGES\_PER\_CLASS):
+            if cls == 'no\_damage':
+                img = generate\_no\_damage()
+            else:
+                img = generate\_damage\_image(cls)
+            img\_filename = f"image\_\{i+1:04d\}.png"
+            img\_path = os.path.join(OUTPUT\_DIR, cls, img\_filename)
+            img.save(img\_path)
+            if (i+1) \% 100 == 0:
+                print(f"  Saved \{i+1\} images")
+    print("Dataset generation complete.")
+
+if \_\_name\_\_ == "\_\_main\_\_":
+    save\_images()
+
+\end{lstlisting}
+
+\end{document}
